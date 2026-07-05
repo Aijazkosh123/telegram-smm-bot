@@ -15,8 +15,7 @@ let userState = {};
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "🤖 *WhatsApp Vote Bot*\n\nWelcome 
-    Software by Aijaz Kosh!",
+    "🤖 *WhatsApp Vote Bot*\n\nWelcome!",
     {
       parse_mode: "Markdown",
       reply_markup: {
