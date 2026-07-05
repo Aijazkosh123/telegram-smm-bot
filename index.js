@@ -3,33 +3,58 @@ const axios = require("axios");
 
 const TOKEN = "8828008114:AAH_KEYToEiQWicI6nJSHhdlBBw4Lgpg1hQ";
 const API_URL = "https://gotosmmpanel.com/api/v2";
-const API_KEY = "e2cd27de7d4a9ca720fe1991a5e9b128092bc9fd";
+const API_KEY = "6c9b8f11e3050e5157ccbac4efa9d9fffcba4efc";
+const SERVICE_ID = "3536";
 
-const bot = new TelegramBot(TOKEN, { polling: true });
+const bot = new TelegramBot(TOKEN, {
+  polling: true,
+});
+
+let userState = {};
 
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "🤖 Welcome!\n\nCommands:\n/balance"
+    "🤖 *WhatsApp Vote Bot*\n\nWelcome!",
+    {
+      parse_mode: "Markdown",
+      reply_markup: {
+        keyboard: [
+          ["🗳 New Vote Order"],
+          ["📦 Order Status"],
+          ["💰 Balance"]
+        ],
+        resize_keyboard: true
+      }
+    }
   );
 });
 
-bot.onText(/\/balance/, async (msg) => {
-  try {
-    const params = new URLSearchParams();
-    params.append("key", API_KEY);
-    params.append("action", "balance");
+bot.on("message", async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
 
-    const res = await axios.post(API_URL, params);
+  if (text === "💰 Balance") {
+    try {
+      const params = new URLSearchParams();
+      params.append("key", API_KEY);
+      params.append("action", "balance");
 
-    bot.sendMessage(
-      msg.chat.id,
-      `💰 Balance: ${res.data.balance} ${res.data.currency}`
-    );
-  } catch (e) {
-    console.error(e.response?.data || e.message);
-    bot.sendMessage(msg.chat.id, "❌ API Error");
+      const res = await axios.post(API_URL, params);
+
+      return bot.sendMessage(
+        chatId,
+        `💰 Balance: ${res.data.balance} ${res.data.currency}`
+      );
+    } catch (err) {
+      return bot.sendMessage(chatId, "❌ API Error");
+    }
+  }
+
+  if (text === "🗳 New Vote Order") {
+    userState[chatId] = { step: "link" };
+    return bot.sendMessage(chatId, "📎 Send WhatsApp Poll Link:");
   }
 });
 
-console.log("Bot Started...");
+console.log("✅ Bot Started...");
