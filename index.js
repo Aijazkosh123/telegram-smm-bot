@@ -3,12 +3,13 @@ const axios = require("axios");
 
 const TOKEN = "8828008114:AAH_KEYToEiQWicI6nJSHhdlBBw4Lgpg1hQ";
 const API_URL = "https://gotosmmpanel.com/api/v2";
-const API_KEY = "6c9b8f11e3050e5157ccbac4efa9d9fffcba4efc";
+const API_KEY = "99b8fd97063632a2e6366b99bab95680fcaea172";
 const SERVICE_ID = "3536";
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
-const userState = {};
+const wallet = {};
+const ADMIN_ID = 6362089364; // یہاں اپنی Telegram Numeric ID لکھیں
 
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
@@ -16,13 +17,13 @@ bot.onText(/\/start/, (msg) => {
     "🤖 WhatsApp Vote Bot\n\nWelcome!",
     {
       reply_markup: {
-        keyboard: [
-          ["🗳 New Vote Order"],
-          ["📦 Order Status"],
-          ["💰 Balance"]
-        ],
-        resize_keyboard: true
-      }
+  keyboard: [
+    ["🗳 New Vote Order"],
+    ["📦 Order Status"],
+    ["💰 Wallet", "💳 Add Balance"]
+  ],
+  resize_keyboard: true
+}
     }
   );
 });
@@ -33,31 +34,38 @@ bot.on("message", async (msg) => {
 
   if (text === "/start") return;
 
-  // Balance
-  if (text === "💰 Balance") {
-    try {
-      const params = new URLSearchParams();
-      params.append("key", API_KEY);
-      params.append("action", "balance");
+// Wallet
+if (text === "💰 Wallet") {
+  return bot.sendMessage(chatId, `💰 Wallet: Rs ${wallet[chatId] || 0}`);
+}
 
-      const res = await axios.post(API_URL, params);
+// Add Balance
+if (text === "💳 Add Balance") {
+  userState[chatId] = { step: "payment" };
 
-      const rate = 280;
-      const pkr = (parseFloat(res.data.balance) * rate).toFixed(2);
+  return bot.sendMessage(
+    chatId,
+    "💳 Easypaisa: 03XX\n💳 JazzCash: 03077321978\n\nPayment کے بعد Transaction ID بھیجیں۔"
+  );
+}
 
-      return bot.sendMessage(chatId, `💰 Wallet: Rs ${pkr}`);
-    } catch (e) {
-      return bot.sendMessage(chatId, "❌ Balance Error");
-    }
-  }
+// Payment Request
+if (userState[chatId]?.step === "payment") {
+  bot.sendMessage(
+    ADMIN_ID,
+    `💰 New Payment Request
 
-const services = {
-  A: "3586",
-  B: "3588",
-  C: "3589",
-  D: "3591",
-  E: "4037"
-};
+👤 User ID: ${chatId}
+🧾 Transaction ID: ${text}`
+  );
+
+  delete userState[chatId];
+
+  return bot.sendMessage(
+    chatId,
+    "✅ آپ کی Payment Request ایڈمن کو بھیج دی گئی ہے۔"
+  );
+}
 
 if (text === "🗳 New Vote Order") {
   return bot.sendMessage(chatId, "Select Service", {
