@@ -51,10 +51,28 @@ bot.on("message", async (msg) => {
     }
   }
 
-  if (text === "🗳 New Vote Order") {
-    userState[chatId] = { step: "link" };
-    return bot.sendMessage(chatId, "📎 Send WhatsApp Poll Link:");
+if (userState[chatId]?.step === "link") {
+  userState[chatId].link = text;
+  userState[chatId].step = "quantity";
+  return bot.sendMessage(chatId, "🔢 Enter Quantity (20-100000):");
+}
+
+if (userState[chatId]?.step === "quantity") {
+  const quantity = parseInt(text);
+
+  if (isNaN(quantity) || quantity < 20 || quantity > 100000) {
+    return bot.sendMessage(chatId, "❌ Quantity must be between 20 and 100000.");
   }
-});
+
+  userState[chatId].quantity = quantity;
+
+  return bot.sendMessage(
+    chatId,
+    `✅ Order Ready
+
+📎 Link: ${userState[chatId].link}
+🗳 Votes: ${quantity}`
+  );
+}
 
 console.log("✅ Bot Started...");
