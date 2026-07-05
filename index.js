@@ -15,7 +15,8 @@ let userState = {};
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "🤖 *WhatsApp Vote Bot*\n\nWelcome!",
+    "🤖 *WhatsApp Vote Bot*\n\nWelcome 
+    Software by Aijaz Kosh!",
     {
       parse_mode: "Markdown",
       reply_markup: {
@@ -44,7 +45,13 @@ bot.on("message", async (msg) => {
 
       return bot.sendMessage(
         chatId,
-        `💰 Balance: ${res.data.balance} ${res.data.currency}`
+        const rate = 280;
+const pkr = (parseFloat(res.data.balance) * rate).toFixed(2);
+
+bot.sendMessage(
+  chatId,
+  `💰 Wallet: Rs ${pkr}`
+);
       );
     } catch (err) {
       return bot.sendMessage(chatId, "❌ API Error");
@@ -60,8 +67,8 @@ if (userState[chatId]?.step === "link") {
 if (userState[chatId]?.step === "quantity") {
   const quantity = parseInt(text);
 
-  if (isNaN(quantity) || quantity < 20 || quantity > 100000) {
-    return bot.sendMessage(chatId, "❌ Quantity must be between 20 and 100000.");
+  if (isNaN(quantity) || quantity < 10 || quantity > 100000) {
+    return bot.sendMessage(chatId, "❌ Quantity must be between 10 and 100000.");
   }
 
   userState[chatId].quantity = quantity;
