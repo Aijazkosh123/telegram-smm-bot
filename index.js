@@ -4,13 +4,20 @@ const axios = require("axios");
 const TOKEN = "8828008114:AAH_KEYToEiQWicI6nJSHhdlBBw4Lgpg1hQ";
 const API_URL = "https://gotosmmpanel.com/api/v2";
 const API_KEY = "99b8fd97063632a2e6366b99bab95680fcaea172";
-const SERVICE_ID = "3536";
-
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 const wallet = {};
-const ADMIN_ID = 6362089364; // یہاں اپنی Telegram Numeric ID لکھیں
+const userState = {};
 
+const services = {
+  "A": "3536",
+  "B": "3537",
+  "C": "3538",
+  "D": "3539",
+  "E": "3540"
+};
+
+const ADMIN_ID = 6362089364;
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
@@ -93,13 +100,22 @@ if (services[text]) {
     userState[chatId].step = "quantity";
     return bot.sendMessage(chatId, "🔢 Enter Quantity:");
   }
+const RATE = 1.87;
+const price = quantity * RATE;
 
-  if (userState[chatId]?.step === "quantity") {
-    const quantity = parseInt(text);
+if ((wallet[chatId] || 0) < price) {
+  delete userState[chatId];
 
-    if (isNaN(quantity) || quantity < 10 || quantity > 100000) {
-      return bot.sendMessage(chatId, "❌ Quantity 10-100000 ہونی چاہیے۔");
-    }
+  return bot.sendMessage(
+    chatId,
+    `❌ Wallet Balance کم ہے۔
+
+💰 Wallet: Rs ${wallet[chatId] || 0}
+💵 Required: Rs ${price.toFixed(2)}`
+  );
+}
+
+wallet[chatId] -= price;
 
     try {
       const params = new URLSearchParams();
