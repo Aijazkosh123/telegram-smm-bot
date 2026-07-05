@@ -51,12 +51,35 @@ bot.on("message", async (msg) => {
     }
   }
 
-  // New Order
-  if (text === "🗳 New Vote Order") {
-    userState[chatId] = { step: "link" };
-    return bot.sendMessage(chatId, "📎 Send WhatsApp Vote Link:");
-  }
+const services = {
+  A: "3586",
+  B: "3588",
+  C: "3589",
+  D: "3591",
+  E: "4037"
+};
 
+if (text === "🗳 New Vote Order") {
+  return bot.sendMessage(chatId, "Select Service", {
+    reply_markup: {
+      keyboard: [
+        ["A", "B"],
+        ["C", "D"],
+        ["E"]
+      ],
+      resize_keyboard: true
+    }
+  });
+}
+
+if (services[text]) {
+  userState[chatId] = {
+    service: services[text],
+    step: "link"
+  };
+
+  return bot.sendMessage(chatId, "📎 Send WhatsApp Vote Link:");
+}
   if (userState[chatId]?.step === "link") {
     userState[chatId].link = text;
     userState[chatId].step = "quantity";
@@ -74,7 +97,7 @@ bot.on("message", async (msg) => {
       const params = new URLSearchParams();
       params.append("key", API_KEY);
       params.append("action", "add");
-      params.append("service", SERVICE_ID);
+      params.append("service", userState[chatId].service);
       params.append("link", userState[chatId].link);
       params.append("quantity", quantity);
 
