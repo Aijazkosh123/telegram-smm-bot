@@ -1,463 +1,86 @@
 const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
 
-const TOKEN = "8828008114:AAH_KEYToEiQWicI6nJSHhdlBBw4Lgpg1hQ";
-const API_URL = "https://gotosmmpanel.com/api/v2";
-const API_KEY = "6c9b8f11e3050e5157ccbac4efa9d9fffcba4efc";
-const ADMIN_ID = 6362089364;
+const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+const ADMIN_ID = Number(process.env.ADMIN_ID);
 
-const bot = new TelegramBot(TOKEN, { polling: true });
+const users = {};
+const orders = {};
 
-const wallet = {};
-const userState = {};
-
-const services = {
-  "A": "3536",
-  "B": "3537",
-  "C": "3538",
-  "D": "3539",
-  "E": "3540"
-};
+function orderId() {
+  return Math.random().toString(36).substring(2, 7).toUpperCase();
+}
 
 bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id,
-    "🤖 WhatsApp Vote Bot",
-    {
-      reply_markup: {
-        keyboard: [
-          ["🗳 New Vote Order"],
-          ["📦 Order Status"],
-          ["💰 Wallet", "💳 Add Balance"]
-        ],
-        resize_keyboard: true
-      }
-    }
-  );
-});
+  const id = msg.chat.id;
 
-bot.on("message", async (msg) => {
-
-  const chatId = msg.chat.id;
-  const text = msg.text;
-
-  if (text === "/start") return;
-
-  // Wallet
-  if (text === "💰 Wallet") {
-    return bot.sendMessage(chatId, `💰 Wallet: Rs ${wallet[chatId] || 0}`);
-  }
-
-  // Add Balance
-  if (text === "💳 Add Balance") {
-
-    userState[chatId] = { step: "payment" };
-
-    return bot.sendMessage(
-      chatId,
-      "JazzCash: 03077321978\n\nPayment کے بعد Transaction ID بھیجیں۔"
-    );
-  }
-
-  // Payment Request
-  if (userState[chatId]?.step === "payment") {
-
+  if (!users[id]) {
+    users[id] = { approved: false };
+    bot.sendMessage(id, "⛔ پہلے Admin Approval ضروری ہے۔");
     bot.sendMessage(
       ADMIN_ID,
-      `💰 Payment Request
-
-User: ${chatId}
-
-Transaction ID:
-${text}
-
-Approve:
-/approve ${chatId} 500`
+      `Approval Request\n\nUser ID: ${id}\n\nApprove:\n/approve ${id}`
     );
-
-    delete userState[chatId];
-
-    return bot.sendMessage(chatId, "✅ Request Sent");
+    return;
   }
 
-  // New Order
-  if (text === "🗳 New Vote Order") {
-
-    return bot.sendMessage(
-      chatId,
-      "Select Service",
-      {
-        reply_markup: {
-          keyboard: [
-            ["A","B"],
-            ["C","D"],
-            ["E"]
-          ],
-          resize_keyboard: true
-        }
-      }
-    );
-  }
-
-  // Service
-  if (services[text]) {
-
-    userState[chatId] = {
-      service: services[text],
-      step: "link"
-    };
-
-    return bot.sendMessage(chatId, "📎 Send Vote Link");
-  }
-
-  // Link
-  if (userState[chatId]?.step === "link") {
-
-    userState[chatId].link = text;
-    userState[chatId].step = "quantity";
-
-    return bot.sendMessage(chatId, "🔢 Enter Quantity");
-  }
-
-  // Quantity
-  if (userState[chatId]?.step === "quantity") {
-
-    const quantity = parseInt(text);
-
-    if (isNaN(quantity) || quantity <= 0) {
-      return bot.sendMessage(chatId, "❌ Invalid Quantity");
-    }
-
-    const price = quantity * 1.87;
-
-    if ((wallet[chatId] || 0) < price) {
-
-      delete userState[chatId];
-
-      return bot.sendMessage(
-        chatId,
-        `❌ Wallet Low
-
-Wallet: Rs ${wallet[chatId] || 0}
-Required: Rs ${price.toFixed(2)}`
-      );
-    }
-
-    wallet[chatId] -= price;
-
-    try {
-
-      const params = new URLSearchParams();
-
-      params.append("key", API_KEY);
-      params.append("action", "add");
-      params.append("service", userState[chatId].service);
-      params.append("link", userState[chatId].link);
-      params.append("quantity", quantity);
-
-      const res = await axios.post(API_URL, params);
-
-      delete userState[chatId];
-
-      if (res.data.order) {
-
-        return bot.sendMessage(
-          chatId,
-          `✅ Order Success
-
-Order ID: ${res.data.order}
-
-Wallet: Rs ${wallet[chatId]}`
-        );
-      } else {
-
-        return bot.sendMessage(chatId, JSON.stringify(res.data));
-      }
-
-    } catch (err) {
-
-      delete userState[chatId];
-
-      return bot.sendMessage(chatId, "❌ Order Failed");
-    }
-  }
-    // ======================
-  // ORDER STATUS
-  // ======================
-
-  if (text === "📦 Order Status") {
-    userState[chatId] = { step: "status" };
-    return bot.sendMessage(chatId, "🆔 Send Order ID:");
-  }
-
-  if (userState[chatId]?.step === "status") {
-    try {
-
-      const params = new URLSearchParams();
-      params.append("key", API_KEY);
-      params.append("action", "status");
-      params.append("order", text);
-
-      const res = await axios.post(API_URL, params);
-
-      delete userState[chatId];
-
-      return bot.sendMessage(
-        chatId,
-`📦 Order Status
-
-🆔 Order: ${text}
-📊 Status: ${res.data.status}
-👥 Start Count: ${res.data.start_count}
-📉 Remains: ${res.data.remains}`
-      );
-
-    } catch (err) {
-
-      delete userState[chatId];
-
-      return bot.sendMessage(chatId, "❌ Status Check Failed");
-    }
-  }
-
-}); // bot.on("message") ختم
-
-// ======================
-// ADMIN APPROVE
-// ======================
-
-bot.onText(/\/approve (\d+) (\d+)/, (msg, match) => {
-
-  if (msg.from.id !== ADMIN_ID) {
-    return bot.sendMessage(msg.chat.id, "❌ Access Denied");
-  }
-
-  const userId = Number(match[1]);
-  const amount = Number(match[2]);
-
-  wallet[userId] = (wallet[userId] || 0) + amount;
-
-  bot.sendMessage(
-    userId,
-`✅ Payment Approved
-
-💰 Added: Rs ${amount}
-💳 Wallet Balance: Rs ${wallet[userId]}`
-  );
-
-  bot.sendMessage(msg.chat.id, "✅ Wallet Updated");
+  bot.sendMessage(id, "Welcome");
 });
 
-// ======================
-// ADMIN REJECT
-// ======================
+bot.onText(/\/approve (.+)/, (msg, match) => {
+  if (msg.chat.id !== ADMIN_ID) return;
 
-bot.onText(/\/reject (\d+)/, (msg, match) => {
+  const id = Number(match[1]);
 
-  if (msg.from.id !== ADMIN_ID) {
-    return bot.sendMessage(msg.chat.id, "❌ Access Denied");
-  }
-
-  const userId = Number(match[1]);
-
-  bot.sendMessage(
-    userId,
-    "❌ آپ کی Payment Request Reject کر دی گئی ہے۔"
-  );
-
-  bot.sendMessage(msg.chat.id, "✅ Request Rejected");
-});
-
-console.log("✅ WhatsApp Vote Bot Started...");  );
-});
-
-bot.on("message", async (msg) => {
-  const chatId = msg.chat.id;
-  const text = msg.text;
-
-  if (text === "/start") return;
-
-  // Wallet
-  if (text === "💰 Wallet") {
-    return bot.sendMessage(
-      chatId,
-      `💰 Wallet Balance: Rs ${wallet[chatId] || 0}`
-    );
-  }
-
-  // Add Balance
-  if (text === "💳 Add Balance") {
-    userState[chatId] = {
-      step: "payment"
-    };
-
-    return bot.sendMessage(
-      chatId,
-      "💳 Easypaisa: 03XXXXXXXXX\n💳 JazzCash: 03077321978\n\nPayment کے بعد Transaction ID بھیجیں۔"
-    );
-  }
-
-  // Payment Request
-  if (userState[chatId]?.step === "payment") {
-
-    bot.sendMessage(
-      ADMIN_ID,
-      `💰 New Payment Request
-
-👤 User: ${chatId}
-🧾 Transaction ID: ${text}
-
-Approve:
-/approve ${chatId} 500`
-    );
-
-    delete userState[chatId];
-
-    return bot.sendMessage(
-      chatId,
-      "✅ Payment Request ایڈمن کو بھیج دی گئی ہے۔"
-    );
-  }
-
-  // New Order
-  if (text === "🗳 New Vote Order") {
-
-    return bot.sendMessage(
-      chatId,
-      "Select Service",
-      {
-        reply_markup: {
-          keyboard: [
-            ["A","B"],
-            ["C","D"],
-            ["E"]
-          ],
-          resize_keyboard: true
-        }
-      }
-    );
-  }
-  // Service Select
-if (services[text]) {
-  userState[chatId] = {
-    service: services[text],
-    step: "link"
+  users[id] = {
+    approved: true,
+    step: "deposit"
   };
 
-  return bot.sendMessage(chatId, "📎 Send WhatsApp Vote Link:");
-}
+  bot.sendMessage(id, "✅ Approved\n\nاب Deposit Amount لکھیں۔");
+});
 
-// Link
-if (userState[chatId]?.step === "link") {
-  userState[chatId].link = text;
-  userState[chatId].step = "quantity";
+bot.on("message", (msg) => {
+  const id = msg.chat.id;
+  const text = msg.text;
 
-  return bot.sendMessage(chatId, "🔢 Enter Quantity:");
-}
+  if (!users[id] || !users[id].approved) return;
 
-// Quantity
-if (userState[chatId]?.step === "quantity") {
-
-  const quantity = parseInt(text);
-
-  if (isNaN(quantity) || quantity <= 0) {
-    return bot.sendMessage(chatId, "❌ Invalid Quantity");
+  if (users[id].step === "deposit") {
+    users[id].deposit = text;
+    users[id].step = "link";
+    return bot.sendMessage(id, "🔗 اپنا Link بھیجیں۔");
   }
 
-  const RATE = 1.87;
-  const price = quantity * RATE;
+  if (users[id].step === "link") {
+    const idOrder = orderId();
 
-  if ((wallet[chatId] || 0) < price) {
-    delete userState[chatId];
+    orders[idOrder] = {
+      user: id,
+      deposit: users[id].deposit,
+      link: text,
+      status: "Pending"
+    };
 
-    return bot.sendMessage(
-      chatId,
-      `❌ Wallet Balance کم ہے
+    users[id].step = null;
 
-💰 Wallet: Rs ${wallet[chatId] || 0}
-💵// ======================
-// ORDER STATUS
-// ======================
+    bot.sendMessage(
+      id,
+      `✅ Order Submitted
 
-if (text === "📦 Order Status") {
-  userState[chatId] = { step: "status" };
-  return bot.sendMessage(chatId, "🆔 اپنا Order ID بھیجیں:");
-}
-
-if (userState[chatId]?.step === "status") {
-  try {
-    const params = new URLSearchParams();
-
-    params.append("key", API_KEY);
-    params.append("action", "status");
-    params.append("order", text);
-
-    const res = await axios.post(API_URL, params);
-
-    delete userState[chatId];
-
-    return bot.sendMessage(
-      chatId,
-      `📦 Order Status
-
-🆔 ${text}
-📊 Status : ${res.data.status}
-👥 Start Count : ${res.data.start_count}
-📉 Remains : ${res.data.remains}
-💰 Charge : ${res.data.charge || "N/A"}`
+Order ID: ${idOrder}
+Status: Pending`
     );
-  } catch (err) {
-    delete userState[chatId];
-    return bot.sendMessage(chatId, "❌ Status Check Failed");
+
+    bot.sendMessage(
+      ADMIN_ID,
+      `📦 New Order
+
+Order ID: ${idOrder}
+User: ${id}
+Deposit: ${orders[idOrder].deposit}
+Link: ${orders[idOrder].link}`
+    );
   }
 });
 
-// ======================
-// ADMIN APPROVE
-// Usage:
-// /approve USER_ID AMOUNT
-// ======================
-
-bot.onText(/\/approve (\d+) (\d+)/, (msg, match) => {
-
-  if (msg.from.id !== ADMIN_ID)
-    return bot.sendMessage(msg.chat.id, "❌ Access Denied");
-
-  const userId = Number(match[1]);
-  const amount = Number(match[2]);
-
-  wallet[userId] = (wallet[userId] || 0) + amount;
-
-  bot.sendMessage(
-    userId,
-    `✅ Payment Approved
-
-💰 Added: Rs ${amount}
-💳 Wallet: Rs ${wallet[userId]}`
-  );
-
-  bot.sendMessage(msg.chat.id, "✅ Wallet Updated");
-});
-
-// ======================
-// ADMIN REJECT
-// Usage:
-// /reject USER_ID
-// ======================
-
-bot.onText(/\/reject (\d+)/, (msg, match) => {
-
-  if (msg.from.id !== ADMIN_ID)
-    return bot.sendMessage(msg.chat.id, "❌ Access Denied");
-
-  const userId = Number(match[1]);
-
-  bot.sendMessage(
-    userId,
-    "❌ آپ کی Payment Request Reject کر دی گئی ہے۔"
-  );
-
-  bot.sendMessage(msg.chat.id, "✅ Request Rejected");
-});
-
-console.log("✅ WhatsApp Vote Bot Started...");
-
+console.log("Bot Started");
