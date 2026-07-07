@@ -2,11 +2,11 @@ const TelegramBot = require("node-telegram-bot-api");
 const axios = require("axios");
 
 // ====== SETTINGS ======
-const TOKEN = "8697588276:AAHDKO40CGa9P27MxK4R3oSTMQaT8-S-grk";
+const TOKEN = "8697588276:AAGaHPch9GKD-L70NFZl0XJFF1naPPnl02k";
 const API_KEY = "d94eb912f4afd973184fee794264a7fb";
-const API_URL = "https://yourpanel.com/api/v2";
+const API_URL = "https://cheappakpanel.com/api/v2";
 const ADMIN_ID = 6362089364;
-const RATE = 1.75; // 1 Vote = Rs 1.75 <- یہاں چینج کیا
+const RATE = 1.75;
 const DEVELOPER = "Developer by Aijaz Kosh 03079257476";
 const EASYPAISA = "03XX-XXXXXXX";
 const JAZZCASH = "03077321978";
@@ -14,16 +14,17 @@ const JAZZCASH = "03077321978";
 // ====== DATA ======
 const bot = new TelegramBot(TOKEN, { polling: true });
 const wallet = {};
-const userVotes = {}; // نئی چیز: یوزر کے پاس کتنے ووٹ ہیں
+const userVotes = {};
 const userState = {};
 const pendingPayments = {};
+const userOrders = {};
 
 const services = {
-  "A": "3536",
-  "B": "3537",
-  "C": "3538",
-  "D": "3539",
-  "E": "3540"
+  "A": "14420", // Answer 1
+  "B": "14421", // Answer 2
+  "C": "14422", // Answer 3
+  "D": "14423", // Answer 4
+  "E": "14424" // Answer 5
 };
 
 // ====== CUSTOM FUNCTION ======
@@ -42,15 +43,24 @@ const mainMenu = [
   [`👨‍💻 ${DEVELOPER}`]
 ];
 
+const adminMenu = [
+  ["📋 Pending Payments"],
+  ["📦 All User Orders"],
+  ["⬅️ Back"]
+];
+
 const serviceMenu = [
-  ["A", "B"],
-  ["C", "D"],
-  ["E"],
+  ["A - Answer 1", "B - Answer 2"],
+  ["C - Answer 3", "D - Answer 4"],
+  ["E - Answer 5"],
   ["⬅️ Back"]
 ];
 
 // ====== /START ======
 bot.onText(/\/start/, (msg) => {
+  if(msg.chat.id == ADMIN_ID){
+    return sendKeyboard(msg.chat.id, `👑 *Admin Panel*\nRate: Rs ${RATE} per Vote`, adminMenu);
+  }
   sendKeyboard(msg.chat.id, `🤖 *Welcome to WhatsApp Vote Bot*\nRate: Rs ${RATE} per Vote`, mainMenu);
 });
 
@@ -71,6 +81,31 @@ bot.on("message", async (msg) => {
   const text = msg.text;
   if (!text || text.startsWith("/")) return;
 
+  // ===== ADMIN PANEL =====
+  if(chatId == ADMIN_ID){
+    if(text === "📋 Pending Payments"){
+      const pending = Object.keys(pendingPayments);
+      if(pending.length === 0) return bot.sendMessage(ADMIN_ID, "❌ کوئی Pending Payment نہیں");
+      let list = "📋 *Pending Payments:*\n\n";
+      pending.forEach(id => {
+        list += `👤 User: \`${id}\`\n💵 Amount: Rs ${pendingPayments[id]}\n\n`;
+      });
+      return bot.sendMessage(ADMIN_ID, list, {parse_mode: "Markdown"});
+    }
+    if(text === "📦 All User Orders"){
+      const users = Object.keys(userOrders);
+      if(users.length === 0) return bot.sendMessage(ADMIN_ID, "❌ ابھی تک کوئی آرڈر نہیں");
+      let list = "📦 *All User Orders:*\n\n";
+      users.forEach(id => {
+        list += `👤 User: \`${id}\`\n🗳 Total Orders: ${userOrders[id].length}\n\n`;
+      });
+      return bot.sendMessage(ADMIN_ID, list, {parse_mode: "Markdown"});
+    }
+    if(text === "⬅️ Back"){
+      return sendKeyboard(ADMIN_ID, "👑 *Admin Panel*", adminMenu);
+    }
+  }
+
   // ===== ADMIN APPROVE/REJECT =====
   if (chatId == ADMIN_ID) {
     if (text.startsWith("✅ Approve")) {
@@ -80,18 +115,18 @@ bot.on("message", async (msg) => {
         wallet[userId] = (wallet[userId] || 0) + amount;
         delete pendingPayments[userId];
         bot.sendMessage(userId, `✅ Payment Approved\n💰 Rs ${amount} Wallet میں add ہو گئے`);
-        return sendKeyboard(ADMIN_ID, `✅ Rs ${amount} add کر دیے گئے User: ${userId}`, mainMenu);
+        return sendKeyboard(ADMIN_ID, `✅ Rs ${amount} add کر دیے گئے User: ${userId}`, adminMenu);
       }
     }
     if (text.startsWith("❌ Reject")) {
       const userId = text.split(" ")[2];
       delete pendingPayments[userId];
       bot.sendMessage(userId, `❌ آپ کی Payment Reject کر دی گئی`);
-      return sendKeyboard(ADMIN_ID, `❌ Payment Reject کر دی User: ${userId}`, mainMenu);
+      return sendKeyboard(ADMIN_ID, `❌ Payment Reject کر دی User: ${userId}`, adminMenu);
     }
   }
 
-  // 1. BALANCE - اب ووٹ بھی دکھائے گا
+  // 1. BALANCE
   if (text === "💰 Balance") {
     const balance = wallet[chatId] || 0;
     const totalVotes = userVotes[chatId] || 0;
@@ -115,7 +150,7 @@ bot.on("message", async (msg) => {
     pendingPayments[chatId] = amount;
     bot.sendMessage(ADMIN_ID, `💰 *New Payment Request*\n👤 User: \`${chatId}\`\n🧾 Txn: \`${txnId}\`\n💵 Amount: Rs ${amount}`, {
       parse_mode: "Markdown",
-      reply_markup: { keyboard: [[`✅ Approve ${chatId}`], [`❌ Reject ${chatId}`]], resize_keyboard: true }
+      reply_markup: { keyboard: [[`✅ Approve ${chatId}`], [`❌ Reject ${chatId}`], ["⬅️ Back"]], resize_keyboard: true }
     });
     delete userState[chatId];
     return sendKeyboard(chatId, "✅ Request ایڈمن کو بھیج دی۔ Approval کے بعد Balance add ہو گا", mainMenu);
@@ -126,10 +161,11 @@ bot.on("message", async (msg) => {
     return sendKeyboard(chatId, `📋 *Service Select کریں:*\nRate: Rs ${RATE} per Vote`, serviceMenu);
   }
 
-  // 5. SERVICE
-  if (services[text]) {
-    userState[chatId] = { service: services[text], step: "link" };
-    return bot.sendMessage(chatId, "📎 *WhatsApp Group Link بھیجیں:*", {parse_mode: "Markdown"});
+  // 5. SERVICE - اب A B C D E سب چیک ہوگا
+  if (text.startsWith("A") || text.startsWith("B") || text.startsWith("C") || text.startsWith("D") || text.startsWith("E")) {
+    const option = text.split(" ")[0];
+    userState[chatId] = { service: services[option], serviceName: option, step: "link" };
+    return bot.sendMessage(chatId, `📎 *WhatsApp Poll Link بھیجیں:*\nآپ نے Select کیا: *${option}*`, {parse_mode: "Markdown"});
   }
 
   // 6. LINK
@@ -144,7 +180,7 @@ bot.on("message", async (msg) => {
     const quantity = parseInt(text);
     if (isNaN(quantity) || quantity < 100) return bot.sendMessage(chatId, "❌ Min 100 Quantity");
 
-    const price = quantity * RATE; // اب 1.75 سے حساب ہوگا
+    const price = quantity * RATE;
     const balance = wallet[chatId] || 0;
 
     if (balance < price) {
@@ -153,7 +189,7 @@ bot.on("message", async (msg) => {
     }
 
     wallet[chatId] -= price;
-    userVotes[chatId] = (userVotes[chatId] || 0) + quantity; // ووٹ count بڑھا دو
+    userVotes[chatId] = (userVotes[chatId] || 0) + quantity;
 
     try {
       const params = new URLSearchParams();
@@ -166,16 +202,21 @@ bot.on("message", async (msg) => {
       const res = await axios.post(API_URL, params);
 
       if (res.data.order) {
+        if(!userOrders[chatId]) userOrders[chatId] = [];
+        userOrders[chatId].push({orderId: res.data.order, service: userState[chatId].serviceName, link: userState[chatId].link, qty: quantity});
+
+        bot.sendMessage(ADMIN_ID, `🆕 *New Order Placed*\n👤 User: \`${chatId}\`\n🆔 Order ID: \`${res.data.order}\`\n📦 Service: ${userState[chatId].serviceName} = ${userState[chatId].service}\n🔗 Link: ${userState[chatId].link}\n🗳 Qty: ${quantity}\n💵 Price: Rs ${price.toFixed(2)}`, {parse_mode: "Markdown"});
+
         delete userState[chatId];
         return sendKeyboard(chatId, `✅ *Order Placed*\n\n🆔 Order ID: \`${res.data.order}\`\n🗳 Votes: ${quantity}\n💵 Price: Rs ${price.toFixed(2)}\n💰 New Balance: Rs ${wallet[chatId].toFixed(2)}\n📊 Total Votes: ${userVotes[chatId]}`, mainMenu);
       } else {
-        wallet[chatId] += price; // refund
+        wallet[chatId] += price;
         userVotes[chatId] -= quantity;
         delete userState[chatId];
         return sendKeyboard(chatId, `❌ Failed: ${res.data.error}`, mainMenu);
       }
     } catch (e) {
-      wallet[chatId] += price; // refund
+      wallet[chatId] += price;
       userVotes[chatId] -= quantity;
       delete userState[chatId];
       return sendKeyboard(chatId, "❌ API Error. پیسے واپس", mainMenu);
@@ -211,6 +252,9 @@ bot.on("message", async (msg) => {
   // 10. BACK
   if (text === "⬅️ Back") {
     delete userState[chatId];
+    if(chatId == ADMIN_ID){
+      return sendKeyboard(chatId, "👑 *Admin Panel*", adminMenu);
+    }
     return sendKeyboard(chatId, "🏠 *Main Menu*", mainMenu);
   }
 });
