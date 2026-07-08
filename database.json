@@ -1,0 +1,47 @@
+{
+  "wallet": {},
+  "userOrders": {},
+  "userVotes": {},
+  "userNames": {},
+  "userNames": {
+    "948523838": "Sreza Hosseiny nasab",
+    "1941283606": "Shuvo Rana",
+    "1989345564": "gammadaa",
+    "2025342802": "Hello CCC",
+    "6362089364": "Aijaz KoSh ㅤᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ⃝ᡃ",
+    "6450578023": "MD Nazmul Islam",
+    "6783111244": "5 Rini 🐾",
+    "6319044476": "Al Amin",
+    "5675469662": "Md Imran Sheikh Rasu",
+    "6762826489": "Riaz Ahmed",
+    "8747008529": "ABBAN ARIFAHA",
+    "5902391976": "Amet",
+    "7190970190": "Me Bux",
+    "8972312149": "Junny Sports",
+    "7379455055": "Asim",
+    "8014854348": "Jamshid",
+    "8321036974": "🇽 ＰＲＯＦＥＳＳＯＲ°🔗🇵🇸",
+    "6245487303": "HM Maruf",
+    "7355618190": "Asif Gul",
+    "6940434649": "Itsmee",
+    "6696480309": "User Died",
+    "5905127555": "القناص",
+    "7041508665": "Siyam",
+    "7695374189": "আল-আমিন ইসলাম",
+    "5745023994": "F а Я а Б i"
+  },
+  "RATE": 1.8,
+  "services": {
+    "A": "14420",
+    "B": "14421",
+    "C": "14422",
+    "D": "14423",
+    "E": "14424"
+  },
+  "customService": {
+    "name": "TikTokviews",
+    "id": "15232",
+    "price": 0.7
+  },
+  "botOrderCounter": 1000
+}
