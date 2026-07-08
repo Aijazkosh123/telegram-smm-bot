@@ -1,14 +1,12 @@
 {
-  "name": "wa-tg-bot",
+  "name": "telebothos-vote-bot",
   "version": "1.0.0",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.6.0",
-    "qrcode-terminal": "^0.12.0",
-    "axios": "^1.6.0",
+    "axios": "^1.7.2",
     "node-telegram-bot-api": "^0.66.0"
   }
 }
